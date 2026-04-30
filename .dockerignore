@@ -1,0 +1,17 @@
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+.next
+.git
+.env*
+README.md
+LICENSE
+.vscode
+.swc
+__tests__
+jest.config.js
+jest.setup.tsx
+eslint.config.mjs
+AGENTS.md
+CLAUDE.md

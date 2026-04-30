@@ -78,7 +78,7 @@ const EducationTimeline: React.FC<EducationTimelineProps> = ({ stages, label }) 
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      transition={{ duration: 0.3, ease: [0.42, 0, 0.58, 1] } as any}
                       className="overflow-hidden"
                     >
                       <div className="bg-white dark:bg-slate-800/40 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-xl px-4 pb-4 pt-3 -mt-1">

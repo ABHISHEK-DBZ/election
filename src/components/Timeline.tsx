@@ -29,14 +29,14 @@ const Timeline: React.FC<TimelineProps> = ({ steps }) => {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: any = {
     hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0, 0, 0.2, 1] } },
   };
 
-  const lineVariants = {
+  const lineVariants: any = {
     hidden: { height: 0 },
-    visible: { height: '100%', transition: { duration: 1.5, ease: 'easeInOut' } },
+    visible: { height: '100%', transition: { duration: 1.5, ease: [0.42, 0, 0.58, 1] } },
   };
 
   return (
