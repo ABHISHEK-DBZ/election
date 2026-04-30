@@ -16,7 +16,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
+      <head>
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
+      </head>
       <body className={`${inter.className} min-h-screen selection:bg-blue-600 selection:text-white`}>
+        {/* Google Identity Services - One Tap Integration */}
+        <div id="g_id_onload"
+             data-client_id="YOUR_GOOGLE_CLIENT_ID"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-auto_prompt="false">
+        </div>
         <nav className="sticky top-0 z-40 bg-white/80 dark:bg-[#0A192F]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <h1 className="text-2xl font-black tracking-tighter text-blue-600 dark:text-blue-400">

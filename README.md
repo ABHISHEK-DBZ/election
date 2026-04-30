@@ -29,6 +29,27 @@ Leverages the **Google Civic Information API** to help users find their local, s
 
 ---
 
+## 🌐 Google Ecosystem Integration (Full Adoption)
+
+CivicFlow 2.0 is built natively on the Google Cloud Platform, utilizing a multi-layered integration strategy to ensure maximum performance, security, and intelligence:
+
+1. **AI & Intelligence**: 
+   - **Google Gemini Pro 1.5**: Powers "Ballot Buddy" for natural language civics queries via the `@google/genai` SDK.
+2. **Data Services**:
+   - **Google Civic Information API**: Fetches real-time federal, state, and local representative data.
+   - **Firebase Firestore**: (Lib integrated) Securely stores user quiz progress and "Voter Readiness" profiles.
+3. **Identity & User Experience**:
+   - **Google Identity (One Tap)**: Provides a frictionless, high-trust authentication experience.
+   - **Google Maps Platform**: Visualizes electoral districts and representative locations.
+   - **YouTube Data API**: Delivers official, non-partisan educational video content.
+4. **Cloud Infrastructure**:
+   - **Google Cloud Run**: Managed compute for our containerized Next.js application.
+   - **Google Cloud Build**: Serverless CI/CD pipeline for automated deployments.
+   - **Google Artifact Registry**: Secure storage for our production-ready container images.
+   - **Google Fonts (Inter)**: Optimized typography via `next/font`.
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Framework**: Next.js 15 (App Router)

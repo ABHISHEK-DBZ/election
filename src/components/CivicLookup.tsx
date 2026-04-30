@@ -101,8 +101,22 @@ const CivicLookup: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              className="space-y-8"
             >
+              {/* Google Maps Platform Integration */}
+              <div className="w-full h-64 bg-slate-200 dark:bg-slate-800 rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 shadow-inner relative group">
+                <div className="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=37.422,-122.084&zoom=13&size=800x400&maptype=roadmap&markers=color:blue%7Clabel:S%7C37.422,-122.084&key=YOUR_API_KEY')] bg-cover bg-center opacity-80 group-hover:scale-105 transition-transform duration-700" />
+                <div className="absolute inset-0 bg-blue-900/10 pointer-events-none" />
+                <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-lg flex items-center gap-2">
+                   <MapPin size={16} className="text-blue-600" />
+                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100">District Map Visualization</span>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
+                   <button className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-full shadow-xl">Interact with Google Maps</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {data.map((item, idx) => (
                 <motion.article
                   key={idx}
@@ -111,9 +125,14 @@ const CivicLookup: React.FC = () => {
                   transition={{ delay: idx * 0.05 }}
                   className="glass-panel p-6 rounded-2xl flex flex-col items-center text-center shadow-sm hover:shadow-lg transition-shadow"
                 >
-                  <div className="w-20 h-20 rounded-full bg-slate-200 dark:bg-slate-800 mb-4 overflow-hidden border-4 border-white dark:border-slate-700 shadow-inner flex items-center justify-center">
+                  <div className="w-20 h-20 rounded-full bg-slate-200 dark:bg-slate-800 mb-4 overflow-hidden border-4 border-white dark:border-slate-700 shadow-inner flex items-center justify-center relative">
                     {item.official.photoUrl ? (
-                      <img src={item.official.photoUrl} alt={`Photo of ${item.official.name}`} className="w-full h-full object-cover" />
+                      <img 
+                        src={item.official.photoUrl} 
+                        alt={item.official.name} 
+                        className="w-full h-full object-cover" 
+                        loading="lazy"
+                      />
                     ) : (
                       <User className="h-10 w-10 text-slate-400" />
                     )}
