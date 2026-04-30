@@ -1,21 +1,42 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Search } from 'lucide-react';
 import { GlossaryItem } from '@/data/electionData';
 
+/**
+ * Props for the Glossary component.
+ * 
+ * @interface GlossaryProps
+ */
 interface GlossaryProps {
+  /** The list of glossary items to display and filter. */
   items: GlossaryItem[];
 }
 
+/**
+ * A searchable glossary component for election-related terminology.
+ * Optimized with useMemo for efficient filtering of large term lists.
+ * 
+ * @component
+ * @param {GlossaryProps} props - The component props.
+ * @returns {JSX.Element} The rendered Glossary UI.
+ */
 const Glossary: React.FC<GlossaryProps> = ({ items }) => {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState<string>('');
 
-  const filteredItems = items.filter(item =>
-    item.term.toLowerCase().includes(search.toLowerCase()) ||
-    item.def.toLowerCase().includes(search.toLowerCase())
-  );
+  /**
+   * Filtered list of glossary items based on current search input.
+   * memoized to prevent re-filtering on unrelated re-renders.
+   */
+  const filteredItems = useMemo((): GlossaryItem[] => {
+    const query = search.toLowerCase();
+    return items.filter(item =>
+      item.term.toLowerCase().includes(query) ||
+      item.def.toLowerCase().includes(query)
+    );
+  }, [items, search]);
 
   return (
     <section aria-label="Election Glossary">
@@ -23,29 +44,30 @@ const Glossary: React.FC<GlossaryProps> = ({ items }) => {
         Essential election vocabulary
       </p>
 
-      {/* Search bar */}
-      <div className="relative mb-5">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* --- Search Interface --- */}
+      <div className="relative mb-5 group">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
         <input
           type="text"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
           placeholder="Search terms…"
-          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
+          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all shadow-sm"
           aria-label="Search glossary terms"
         />
       </div>
 
+      {/* --- Terms Grid --- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {filteredItems.map((item, idx) => (
+        {filteredItems.map((item: GlossaryItem, idx: number) => (
           <motion.div
             key={item.term}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.02 }}
-            className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3.5 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors"
+            transition={{ delay: idx * 0.02, ease: "easeOut" }}
+            className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3.5 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm transition-all"
           >
-            <h4 className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 mb-1">
+            <h4 className="text-[13px] font-bold text-slate-800 dark:text-slate-100 mb-1">
               {item.term}
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -54,9 +76,11 @@ const Glossary: React.FC<GlossaryProps> = ({ items }) => {
           </motion.div>
         ))}
         {filteredItems.length === 0 && (
-          <p className="col-span-2 text-center text-sm text-slate-400 dark:text-slate-500 py-8">
-            No terms match your search.
-          </p>
+          <div className="col-span-2 text-center p-12 bg-white/50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+             <p className="text-sm text-slate-400 dark:text-slate-500">
+               No terms match your search. Try different keywords.
+             </p>
+          </div>
         )}
       </div>
     </section>

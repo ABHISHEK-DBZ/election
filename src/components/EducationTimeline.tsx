@@ -4,17 +4,58 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Info, PlayCircle } from 'lucide-react';
 import { ElectionStage } from '@/data/electionData';
+import { logTimelineEvent } from '@/lib/firebase';
+import { Transition } from 'framer-motion';
 
+/**
+ * Props for the EducationTimeline component.
+ * 
+ * @interface EducationTimelineProps
+ */
 interface EducationTimelineProps {
+  /** The list of election stages to display in the timeline. */
   stages: ElectionStage[];
+  /** The label/title for this specific timeline. */
   label: string;
 }
 
+/**
+ * An interactive, accordion-style timeline for exploring election processes.
+ * Integrates with Google Firebase for event tracking and uses optimized Framer Motion transitions.
+ * 
+ * @component
+ * @param {EducationTimelineProps} props - The component props.
+ * @returns {JSX.Element} The rendered EducationTimeline.
+ */
 const EducationTimeline: React.FC<EducationTimelineProps> = ({ stages, label }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const toggle = (idx: number) => {
+  /**
+   * Toggles the visibility of a timeline stage and logs the interaction to Firebase.
+   * 
+   * @param {number} idx - The index of the stage to toggle.
+   */
+  const toggle = async (idx: number): Promise<void> => {
+    const isOpening = openIndex !== idx;
     setOpenIndex(prev => (prev === idx ? null : idx));
+    
+    if (isOpening) {
+      // Log interaction to Google Firebase Analytics/Firestore
+      await logTimelineEvent({
+        stepTitle: stages[idx].title,
+        country: label,
+        timestamp: Date.now(),
+        action: 'expand'
+      });
+    }
+  };
+
+  /**
+   * Optimized Bezier curve for consistent animation timing.
+   */
+  const smoothTransition: Transition = {
+    duration: 0.3,
+    ease: [0.42, 0, 0.58, 1]
   };
 
   return (
@@ -78,7 +119,7 @@ const EducationTimeline: React.FC<EducationTimelineProps> = ({ stages, label }) 
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: [0.42, 0, 0.58, 1] } as any}
+                      transition={smoothTransition}
                       className="overflow-hidden"
                     >
                       <div className="bg-white dark:bg-slate-800/40 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-xl px-4 pb-4 pt-3 -mt-1">

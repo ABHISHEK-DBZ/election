@@ -5,11 +5,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, RotateCcw, ArrowRight, Trophy } from 'lucide-react';
 import { QuizQuestion } from '@/data/electionData';
 
+/**
+ * Props for the Quiz component.
+ * 
+ * @interface QuizProps
+ */
 interface QuizProps {
+  /** The list of quiz questions to display. */
   questions: QuizQuestion[];
+  /** The label of the country for the current quiz context. */
   countryLabel: string;
 }
 
+/**
+ * Interactive Quiz component that tests user knowledge on election processes.
+ * Features score tracking, immediate feedback, and a summary results screen.
+ * 
+ * @component
+ * @param {QuizProps} props - The component props.
+ * @returns {JSX.Element} The rendered Quiz UI.
+ */
 const Quiz: React.FC<QuizProps> = ({ questions, countryLabel }) => {
   const [idx, setIdx] = useState(0);
   const [answered, setAnswered] = useState(false);

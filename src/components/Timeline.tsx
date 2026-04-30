@@ -1,25 +1,35 @@
 'use client';
 
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, Variants } from 'framer-motion';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { TimelineStepProps } from '@/types';
 
+/**
+ * Props for the Timeline component.
+ * 
+ * @interface TimelineProps
+ */
 interface TimelineProps {
+  /** The sequence of steps to display in the voting journey. */
   steps: TimelineStepProps[];
 }
 
 /**
  * Interactive, animated Voting Journey Timeline using Framer Motion.
+ * Uses staggered reveals and progress line animations to visualize electoral stages.
  * 
  * @component
- * @param {TimelineProps} props - The component props containing the timeline steps.
+ * @param {TimelineProps} props - The component props.
  * @returns {JSX.Element} The rendered animated timeline.
  */
 const Timeline: React.FC<TimelineProps> = ({ steps }) => {
   const shouldReduceMotion = useReducedMotion();
 
-  const containerVariants = {
+  /**
+   * Animation variants for the container to stagger child animations.
+   */
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -29,12 +39,18 @@ const Timeline: React.FC<TimelineProps> = ({ steps }) => {
     },
   };
 
-  const itemVariants: any = {
+  /**
+   * Animation variants for individual timeline items.
+   */
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0, 0, 0.2, 1] } },
   };
 
-  const lineVariants: any = {
+  /**
+   * Animation variants for the vertical progress line.
+   */
+  const lineVariants: Variants = {
     hidden: { height: 0 },
     visible: { height: '100%', transition: { duration: 1.5, ease: [0.42, 0, 0.58, 1] } },
   };
