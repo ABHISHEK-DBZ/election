@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { FramerProvider } from '@/components/FramerProvider';
 
 /**
  * Optimized Google Font (Inter) for enhanced performance and visual consistency.
@@ -63,10 +64,12 @@ export default function RootLayout({
           </div>
         </nav>
 
-        {/* --- Main Content --- */}
-        <main id="main-content" className="flex-1">
-          {children}
-        </main>
+        <FramerProvider>
+          {/* --- Main Content --- */}
+          <main id="main-content" className="flex-1">
+            {children}
+          </main>
+        </FramerProvider>
 
         {/* --- Global Footer --- */}
         <footer className="py-12 border-t border-slate-200 dark:border-slate-800 text-center text-sm font-medium text-slate-500 dark:text-slate-400">

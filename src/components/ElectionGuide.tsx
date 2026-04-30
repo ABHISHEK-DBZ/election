@@ -3,7 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Brain, BookOpen, MessageCircle, Flag } from 'lucide-react';
-import { ELECTION_DATA, QUIZZES, GLOSSARY, COUNTRY_LABELS, CountryKey } from '@/data/electionData';
+import { ELECTION_DATA, QUIZZES, GLOSSARY, COUNTRY_LABELS } from '@/data/electionData';
+import { CountryKey } from '@/types';
 import EducationTimeline from '@/components/EducationTimeline';
 import Quiz from '@/components/Quiz';
 import Glossary from '@/components/Glossary';

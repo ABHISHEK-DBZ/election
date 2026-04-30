@@ -1,119 +1,101 @@
 'use client';
 
 import React from 'react';
-import { motion, useReducedMotion, Variants } from 'framer-motion';
-import { CheckCircle2, Circle } from 'lucide-react';
-import { TimelineStepProps } from '@/types';
+import { m, useReducedMotion } from 'framer-motion';
+import { CheckCircle2, Circle, ArrowRight } from 'lucide-react';
+import { TimelineStepProps, TimelineProps, Variants } from '@/types';
 
 /**
- * Props for the Timeline component.
- * 
- * @interface TimelineProps
- */
-interface TimelineProps {
-  /** The sequence of steps to display in the voting journey. */
-  steps: TimelineStepProps[];
-}
-
-/**
- * Interactive, animated Voting Journey Timeline using Framer Motion.
- * Uses staggered reveals and progress line animations to visualize electoral stages.
+ * Animated voting journey timeline.
+ * Refactored to use LazyMotion (m) and respect user reduced motion preferences.
  * 
  * @component
- * @param {TimelineProps} props - The component props.
- * @returns {JSX.Element} The rendered animated timeline.
+ * @param {TimelineProps} props - Component properties.
+ * @returns {JSX.Element} The rendered Timeline.
  */
 const Timeline: React.FC<TimelineProps> = ({ steps }) => {
   const shouldReduceMotion = useReducedMotion();
 
   /**
-   * Animation variants for the container to stagger child animations.
+   * Container variants for staggered reveals.
    */
-  const containerVariants: Variants = {
+  const container: Variants = {
     hidden: { opacity: 0 },
-    visible: {
+    show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.3,
+        staggerChildren: shouldReduceMotion ? 0 : 0.2,
       },
     },
   };
 
   /**
-   * Animation variants for individual timeline items.
+   * Item variants that adapt to reduced motion.
    */
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0, 0, 0.2, 1] } },
-  };
-
-  /**
-   * Animation variants for the vertical progress line.
-   */
-  const lineVariants: Variants = {
-    hidden: { height: 0 },
-    visible: { height: '100%', transition: { duration: 1.5, ease: [0.42, 0, 0.58, 1] } },
+  const item: Variants = {
+    hidden: { 
+      opacity: 0, 
+      x: shouldReduceMotion ? 0 : -30 
+    },
+    show: { 
+      opacity: 1, 
+      x: 0,
+      transition: { type: 'spring', damping: 20 }
+    },
   };
 
   return (
-    <section 
-      aria-label="Voting Journey Timeline" 
-      className="w-full max-w-2xl mx-auto py-16 px-6"
+    <m.div 
+      variants={container} 
+      initial="hidden" 
+      whileInView="show" 
+      viewport={{ once: true, margin: "-100px" }}
+      className="max-w-4xl mx-auto px-6 py-12"
     >
-      <motion.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-100px' }}
-        variants={containerVariants}
-        className="relative"
-      >
-        {/* Background Line */}
-        <div className="absolute left-[19px] top-4 bottom-0 w-1 bg-slate-200 dark:bg-slate-800 rounded-full" />
+      <div className="relative">
+        {/* Progress Line */}
+        <div className="absolute left-[27px] top-4 bottom-4 w-1 bg-slate-100 dark:bg-slate-800 rounded-full" aria-hidden="true" />
         
-        {/* Animated Progress Line */}
-        <motion.div 
-          variants={lineVariants}
-          className="absolute left-[19px] top-4 w-1 bg-blue-600 rounded-full origin-top"
-          aria-hidden="true"
-        />
-
-        <div className="space-y-16">
-          {steps.map((step, index) => (
-            <motion.article 
-              key={index} 
-              variants={itemVariants}
-              className="relative pl-14"
-              aria-current={step.current ? 'step' : undefined}
-            >
-              <div 
-                className={`absolute left-0 top-1 p-1 rounded-full bg-white dark:bg-slate-900 border-2 z-10 transition-colors duration-300 ${
-                  step.completed ? 'border-green-600 text-green-600' : 
-                  step.current ? 'border-blue-600 text-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'border-slate-300 text-slate-300 dark:border-slate-700 dark:text-slate-700'
-                }`}
-              >
-                {step.completed ? (
-                  <CheckCircle2 size={28} aria-hidden="true" className="bg-white dark:bg-slate-900 rounded-full" />
-                ) : (
-                  <Circle size={28} aria-hidden="true" className="bg-white dark:bg-slate-900 rounded-full" />
-                )}
+        <div className="space-y-12">
+          {steps.map((step: TimelineStepProps, idx: number) => (
+            <m.div key={idx} variants={item} className="relative flex items-start gap-8 group">
+              {/* Icon / Status */}
+              <div className={`relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform ${
+                step.completed ? 'bg-blue-600 text-white' : 
+                step.current ? 'bg-white dark:bg-slate-900 border-2 border-blue-600 text-blue-600' : 
+                'bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 text-slate-300'
+              }`}>
+                {step.completed ? <CheckCircle2 size={28} /> : <Circle size={28} />}
               </div>
-              <div className="flex flex-col glass-panel p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                <h3 
-                  className={`text-2xl font-bold mb-2 tracking-tight ${
-                    step.current ? 'text-blue-700 dark:text-blue-400' : 'text-slate-800 dark:text-slate-100'
-                  }`}
-                >
+
+              {/* Content Card */}
+              <div className="flex-1 pt-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 opacity-60">Phase 0{idx + 1}</span>
+                  {step.current && (
+                    <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Current</span>
+                  )}
+                </div>
+                <h3 className={`text-2xl font-black mb-3 tracking-tight ${step.current ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
                   {step.title}
                 </h3>
-                <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-lg">
+                <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                   {step.description}
                 </p>
+                {step.current && (
+                  <m.button 
+                    whileHover={shouldReduceMotion ? {} : { x: 5 }}
+                    className="mt-6 flex items-center gap-2 text-blue-600 font-bold text-sm group"
+                  >
+                    Get Started <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  </m.button>
+                )}
               </div>
-            </motion.article>
+            </m.div>
           ))}
         </div>
-      </motion.div>
-    </section>
+      </div>
+    </m.div>
   );
 };
 

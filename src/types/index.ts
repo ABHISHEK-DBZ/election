@@ -27,6 +27,8 @@ export interface ChatMessage {
   sender: 'user' | 'bot';
 }
 
+export type CountryKey = 'us' | 'in' | 'uk' | 'generic';
+
 /**
  * Data structure representing a government official from the Google Civic API.
  */
@@ -41,6 +43,8 @@ export interface CivicOfficial {
   urls?: string[];
   /** URL to the official's profile photo. */
   photoUrl?: string;
+  /** Social media channels. */
+  channels?: { type: string; id: string }[];
 }
 
 /**
@@ -72,3 +76,74 @@ export interface OrganizedRepresentative {
   /** The official's details. */
   official: CivicOfficial;
 }
+
+/**
+ * Re-exporting Framer Motion types for centralized access.
+ */
+import { Variants as FMVariants, Transition as FMTransition } from 'framer-motion';
+export type Variants = FMVariants;
+export type Transition = FMTransition;
+
+/**
+ * Properties for the Timeline component.
+ */
+export interface TimelineProps {
+  steps: TimelineStepProps[];
+}
+
+export interface CountryData {
+  label: string;
+  stages: TimelineStage[];
+}
+
+/**
+ * Structure of a single stage in the education timeline.
+ */
+export interface TimelineStage {
+  title: string;
+  period: string;
+  description: string;
+  tips: string[];
+}
+
+/**
+ * Properties for the EducationTimeline component.
+ */
+export interface EducationTimelineProps {
+  stages: TimelineStage[];
+  label: string;
+}
+
+/**
+ * Structure of a single glossary item.
+ */
+export interface GlossaryItem {
+  term: string;
+  definition: string;
+}
+
+/**
+ * Properties for the Glossary component.
+ */
+export interface GlossaryProps {
+  items: GlossaryItem[];
+}
+
+/**
+ * Structure of a single quiz question.
+ */
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctIdx: number;
+  explanation: string;
+}
+
+/**
+ * Properties for the Quiz component.
+ */
+export interface QuizProps {
+  questions: QuizQuestion[];
+  countryLabel: string;
+}
+

@@ -1,49 +1,35 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Info, PlayCircle } from 'lucide-react';
-import { ElectionStage } from '@/data/electionData';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { ChevronDown, Info, Calendar, Sparkles } from 'lucide-react';
+import { EducationTimelineProps, TimelineStage, Variants } from '@/types';
 import { logTimelineEvent } from '@/lib/firebase';
-import { Transition } from 'framer-motion';
 
 /**
- * Props for the EducationTimeline component.
- * 
- * @interface EducationTimelineProps
- */
-interface EducationTimelineProps {
-  /** The list of election stages to display in the timeline. */
-  stages: ElectionStage[];
-  /** The label/title for this specific timeline. */
-  label: string;
-}
-
-/**
- * An interactive, accordion-style timeline for exploring election processes.
- * Integrates with Google Firebase for event tracking and uses optimized Framer Motion transitions.
+ * Country-specific detailed election timeline.
+ * Refactored to use LazyMotion (m) and respect user reduced motion preferences.
+ * Includes Firebase telemetry for interaction tracking.
  * 
  * @component
- * @param {EducationTimelineProps} props - The component props.
- * @returns {JSX.Element} The rendered EducationTimeline.
+ * @param {EducationTimelineProps} props - Component properties.
+ * @returns {JSX.Element} The rendered detailed timeline.
  */
 const EducationTimeline: React.FC<EducationTimelineProps> = ({ stages, label }) => {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
+  const shouldReduceMotion = useReducedMotion();
 
   /**
-   * Toggles the visibility of a timeline stage and logs the interaction to Firebase.
-   * 
-   * @param {number} idx - The index of the stage to toggle.
+   * Handles expansion and logs telemetry to Firebase.
    */
-  const toggle = async (idx: number): Promise<void> => {
-    const isOpening = openIndex !== idx;
-    setOpenIndex(prev => (prev === idx ? null : idx));
+  const handleToggle = (idx: number, title: string) => {
+    const isExpanding = expandedIndex !== idx;
+    setExpandedIndex(isExpanding ? idx : null);
     
-    if (isOpening) {
-      // Log interaction to Google Firebase Analytics/Firestore
-      await logTimelineEvent({
-        stepTitle: stages[idx].title,
+    if (isExpanding) {
+      logTimelineEvent({
         country: label,
+        stepTitle: title,
         timestamp: Date.now(),
         action: 'expand'
       });
@@ -51,119 +37,114 @@ const EducationTimeline: React.FC<EducationTimelineProps> = ({ stages, label }) 
   };
 
   /**
-   * Optimized Bezier curve for consistent animation timing.
+   * Animation variants for the container.
    */
-  const smoothTransition: Transition = {
-    duration: 0.3,
-    ease: [0.42, 0, 0.58, 1]
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: shouldReduceMotion ? 0 : 0.1,
+      },
+    },
+  };
+
+  /**
+   * Animation variants for stage cards.
+   */
+  const itemVariants: Variants = {
+    hidden: { 
+      opacity: 0, 
+      y: shouldReduceMotion ? 0 : 20 
+    },
+    show: { 
+      opacity: 1, 
+      y: 0 
+    },
   };
 
   return (
-    <section aria-label={label}>
-      <p className="text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
-        {label}
-      </p>
-      <div className="relative pl-8">
-        {/* Vertical connector line */}
-        <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-slate-200 dark:bg-slate-700 rounded-full" aria-hidden="true" />
-
-        <div className="space-y-4">
-          {stages.map((stage, idx) => {
-            const isOpen = openIndex === idx;
-            return (
-              <div key={idx} className="relative">
-                {/* Dot */}
-                <div
-                  className="absolute -left-8 top-[14px] w-[14px] h-[14px] rounded-full border-2 border-white dark:border-slate-900 z-10 transition-transform hover:scale-125 shadow-sm"
-                  style={{ backgroundColor: stage.color }}
-                  aria-hidden="true"
-                />
-
-                {/* Card */}
-                <button
-                  onClick={() => toggle(idx)}
-                  className={`w-full text-left bg-white dark:bg-slate-800/60 border rounded-xl px-4 py-3 transition-all hover:border-slate-300 dark:hover:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                    isOpen ? 'border-slate-300 dark:border-slate-600 shadow-sm' : 'border-slate-200 dark:border-slate-700'
-                  }`}
-                  aria-expanded={isOpen}
-                  aria-controls={`stage-body-${idx}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500 min-w-[24px]">
-                      {String(idx + 1).padStart(2, '0')}
-                    </span>
-                    <span className="text-[15px] font-medium text-slate-800 dark:text-slate-100 flex-1">
-                      {stage.title}
-                    </span>
-                    <span
-                      className="text-[11px] font-medium px-2 py-[2px] rounded-full"
-                      style={{ backgroundColor: stage.badgeBg, color: stage.badgeColor }}
-                    >
-                      {stage.badge}
-                    </span>
-                    <ChevronDown
-                      size={14}
-                      className={`text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 ml-9">
-                    {stage.timing}
-                  </p>
-                </button>
-
-                {/* Expandable body */}
-                <AnimatePresence>
-                  {isOpen && (
-                    <motion.div
-                      id={`stage-body-${idx}`}
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={smoothTransition}
-                      className="overflow-hidden"
-                    >
-                      <div className="bg-white dark:bg-slate-800/40 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-xl px-4 pb-4 pt-3 -mt-1">
-                        <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
-                          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                            {stage.desc}
-                          </p>
-                          
-                          {/* NEW: Integration with YouTube Data API / Embed for Google Services Score */}
-                          <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900/40 rounded-lg border border-slate-100 dark:border-slate-700">
-                             <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                               <PlayCircle size={12} className="text-red-500" /> Google Video Guide
-                             </div>
-                             <div className="aspect-video w-full bg-slate-200 dark:bg-slate-800 rounded-md flex items-center justify-center relative overflow-hidden group cursor-pointer">
-                               <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                               <div className="z-10 flex flex-col items-center gap-2">
-                                 <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                   <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-red-600 border-b-[6px] border-b-transparent ml-1" />
-                                 </div>
-                                 <span className="text-[11px] font-medium text-white shadow-sm">Watch Educational Short</span>
-                               </div>
-                               {/* Real YouTube Embed logic could go here; using a high-quality placeholder for hackathon grade performance */}
-                             </div>
-                          </div>
-
-                          <div className="mt-4 space-y-2">
-                            {stage.tips.map((tip, tipIdx) => (
-                              <div key={tipIdx} className="flex items-start gap-2 text-[13px] text-slate-500 dark:text-slate-400">
-                                <Info size={14} className="flex-shrink-0 mt-[2px]" style={{ color: stage.color }} />
-                                <span>{tip}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
-        </div>
+    <m.div 
+      variants={containerVariants} 
+      initial="hidden" 
+      animate="show" 
+      className="space-y-4"
+    >
+      <div className="flex items-center gap-2 mb-8 text-blue-600">
+        <Sparkles size={20} />
+        <h2 className="text-xl font-black uppercase tracking-widest">{label} Timeline</h2>
       </div>
-    </section>
+
+      {stages.map((stage: TimelineStage, idx: number) => {
+        const isExpanded = expandedIndex === idx;
+        
+        return (
+          <m.div 
+            key={idx} 
+            variants={itemVariants}
+            className={`glass-panel overflow-hidden transition-all duration-500 border border-white/20 dark:border-slate-800/50 ${
+              isExpanded 
+                ? 'bg-white dark:bg-slate-800/90 shadow-2xl scale-[1.02]' 
+                : 'bg-white/40 dark:bg-slate-900/40 hover:bg-white/60 dark:hover:bg-slate-900/60'
+            }`}
+          >
+            <button 
+              onClick={() => handleToggle(idx, stage.title)}
+              className="w-full text-left p-6 flex items-center justify-between group focus:outline-none"
+              aria-expanded={isExpanded}
+            >
+              <div className="flex items-center gap-6">
+                <span className="text-3xl font-black text-blue-600/20 group-hover:text-blue-600 transition-colors">0{idx + 1}</span>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{stage.title}</h3>
+                  <p className="text-sm font-bold text-blue-600/60 uppercase tracking-widest mt-0.5">{stage.period}</p>
+                </div>
+              </div>
+              <ChevronDown 
+                className={`transition-transform duration-500 ${isExpanded ? 'rotate-180 text-blue-600' : 'text-slate-400'}`} 
+                size={24} 
+              />
+            </button>
+
+            <AnimatePresence>
+              {isExpanded && (
+                <m.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                >
+                  <div className="px-6 pb-8 border-t border-slate-100 dark:border-slate-700/50 pt-6">
+                    <div className="grid md:grid-cols-1 gap-6">
+                      <div className="bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-3xl border border-blue-100/50 dark:border-blue-800/30">
+                        <div className="flex items-center gap-2 mb-4 text-blue-600">
+                          <Info size={18} />
+                          <h4 className="font-black uppercase tracking-tighter text-sm">Deep Dive</h4>
+                        </div>
+                        <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                          {stage.description}
+                        </p>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        {stage.tips.map((tip, tIdx) => (
+                          <div key={tIdx} className="flex gap-4 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                            <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-blue-600 flex-shrink-0">
+                              <Calendar size={16} />
+                            </div>
+                            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{tip}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </m.div>
+              )}
+            </AnimatePresence>
+          </m.div>
+        );
+      })}
+    </m.div>
   );
 };
 

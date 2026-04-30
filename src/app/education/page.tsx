@@ -3,33 +3,42 @@
 /**
  * @fileoverview Main Education Hub page for CivicFlow 2.0.
  * Integrates interactive timelines, quizzes, glossaries, and AI assistants.
- * Optimized for performance using dynamic imports and efficient state management.
+ * Optimized with Suspense, LazyMotion, and custom hooks for peak performance.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useCallback, Suspense } from 'react';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { Clock, Brain, BookOpen, MessageCircle, Flag, Loader2 } from 'lucide-react';
-import { ELECTION_DATA, QUIZZES, GLOSSARY, CountryKey } from '@/data/electionData';
+import { GLOSSARY } from '@/data/electionData';
+import { useElectionData } from '@/hooks/useElectionData';
+import { CountryKey } from '@/types';
+
+// --- Loading Skeletons for Suspense ---
+const TabSkeleton = () => (
+  <div className="h-64 w-full animate-pulse bg-white/5 dark:bg-slate-800/30 rounded-3xl flex items-center justify-center border border-white/5">
+    <Loader2 className="animate-spin text-blue-500/30" size={32} />
+  </div>
+);
 
 // --- Dynamic Imports for Efficiency (Lazy Loading) ---
 const EducationTimeline = dynamic(() => import('@/components/EducationTimeline'), {
-  loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>,
+  loading: () => <TabSkeleton />,
   ssr: false
 });
 
 const Quiz = dynamic(() => import('@/components/Quiz'), {
-  loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>,
+  loading: () => <TabSkeleton />,
   ssr: false
 });
 
 const Glossary = dynamic(() => import('@/components/Glossary'), {
-  loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>,
+  loading: () => <TabSkeleton />,
   ssr: false
 });
 
 const AskAnything = dynamic(() => import('@/components/AskAnything'), {
-  loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>,
+  loading: () => <TabSkeleton />,
   ssr: false
 });
 
@@ -38,18 +47,12 @@ const AskAnything = dynamic(() => import('@/components/AskAnything'), {
  */
 type TabKey = 'timeline' | 'quiz' | 'glossary' | 'ask';
 
-/**
- * Interface for country selection options.
- */
 interface CountryOption {
   key: CountryKey;
   label: string;
   emoji: string;
 }
 
-/**
- * Interface for tab navigation items.
- */
 interface TabItem {
   key: TabKey;
   label: string;
@@ -77,35 +80,18 @@ const TABS: TabItem[] = [
  * @returns {JSX.Element} The rendered Education Hub.
  */
 export default function EducationPage() {
-  const [country, setCountry] = useState<CountryKey>('us');
   const [tab, setTab] = useState<TabKey>('timeline');
-  const [quizKey, setQuizKey] = useState<number>(0);
+  const shouldReduceMotion = useReducedMotion();
 
-  /**
-   * Derived election data for the selected country.
-   */
-  const data = useMemo(() => ELECTION_DATA[country], [country]);
+  // Custom hook for state management
+  const { 
+    country, 
+    electionData, 
+    quizData, 
+    quizKey, 
+    selectCountry 
+  } = useElectionData('us');
 
-  /**
-   * Derived quiz questions for the selected country.
-   */
-  const quiz = useMemo(() => QUIZZES[country], [country]);
-
-  /**
-   * Handles country change and resets the quiz state.
-   * 
-   * @param {CountryKey} c - The selected country key.
-   */
-  const handleCountryChange = useCallback((c: CountryKey): void => {
-    setCountry(c);
-    setQuizKey(prev => prev + 1);
-  }, []);
-
-  /**
-   * Handles tab navigation.
-   * 
-   * @param {TabKey} t - The selected tab key.
-   */
   const handleTabChange = useCallback((t: TabKey): void => {
     setTab(t);
   }, []);
@@ -115,8 +101,8 @@ export default function EducationPage() {
       {/* --- Full-width Hero Header --- */}
       <div className="bg-gradient-to-b from-blue-900 via-[#0A192F] to-[#0F172A] text-white py-16 px-6">
         <div className="max-w-3xl mx-auto">
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
+          <m.div 
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-4 mb-8"
           >
@@ -129,14 +115,14 @@ export default function EducationPage() {
                 Interactive civics education — explore timelines, quiz yourself, and understand democracy.
               </p>
             </div>
-          </motion.div>
+          </m.div>
 
           {/* --- Country Selector --- */}
           <div className="flex flex-wrap gap-2 mb-8">
             {COUNTRIES.map(c => (
               <button 
                 key={c.key} 
-                onClick={() => handleCountryChange(c.key)} 
+                onClick={() => selectCountry(c.key)} 
                 className={`px-4 py-2 rounded-full text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
                   country === c.key 
                     ? 'bg-white text-slate-900 shadow-lg scale-105' 
@@ -179,18 +165,20 @@ export default function EducationPage() {
       {/* --- Content Area --- */}
       <div className="max-w-3xl mx-auto px-6 py-12">
         <AnimatePresence mode="wait">
-          <motion.div 
+          <m.div 
             key={`${tab}-${country}`} 
-            initial={{ opacity: 0, y: 12 }} 
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 12 }} 
             animate={{ opacity: 1, y: 0 }} 
-            exit={{ opacity: 0, y: -12 }} 
-            transition={{ duration: 0.3, ease: [0.42, 0, 0.58, 1] } as any}
+            exit={{ opacity: 0, y: shouldReduceMotion ? 0 : -12 }} 
+            transition={{ duration: 0.3, ease: [0.42, 0, 0.58, 1] }}
           >
-            {tab === 'timeline' && <EducationTimeline stages={data.stages} label={data.label} />}
-            {tab === 'quiz' && <Quiz key={quizKey} questions={quiz} countryLabel={data.label} />}
-            {tab === 'glossary' && <Glossary items={GLOSSARY} />}
-            {tab === 'ask' && <AskAnything />}
-          </motion.div>
+            <Suspense fallback={<TabSkeleton />}>
+              {tab === 'timeline' && <EducationTimeline stages={electionData.stages} label={electionData.label} />}
+              {tab === 'quiz' && <Quiz key={quizKey} questions={quizData} countryLabel={electionData.label} />}
+              {tab === 'glossary' && <Glossary items={GLOSSARY} />}
+              {tab === 'ask' && <AskAnything />}
+            </Suspense>
+          </m.div>
         </AnimatePresence>
       </div>
     </div>

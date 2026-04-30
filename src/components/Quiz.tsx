@@ -1,164 +1,172 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, RotateCcw, ArrowRight, Trophy } from 'lucide-react';
-import { QuizQuestion } from '@/data/electionData';
+import React, { useState, useCallback, useMemo } from 'react';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { Check, X, RefreshCcw, Brain, Trophy, ArrowRight } from 'lucide-react';
+import { QuizProps, QuizQuestion, Variants } from '@/types';
 
 /**
- * Props for the Quiz component.
- * 
- * @interface QuizProps
- */
-interface QuizProps {
-  /** The list of quiz questions to display. */
-  questions: QuizQuestion[];
-  /** The label of the country for the current quiz context. */
-  countryLabel: string;
-}
-
-/**
- * Interactive Quiz component that tests user knowledge on election processes.
- * Features score tracking, immediate feedback, and a summary results screen.
+ * Interactive civic knowledge quiz.
+ * Refactored to use LazyMotion (m) and respect user reduced motion preferences.
  * 
  * @component
- * @param {QuizProps} props - The component props.
- * @returns {JSX.Element} The rendered Quiz UI.
+ * @param {QuizProps} props - Component properties.
+ * @returns {JSX.Element} The rendered Quiz.
  */
 const Quiz: React.FC<QuizProps> = ({ questions, countryLabel }) => {
-  const [idx, setIdx] = useState(0);
-  const [answered, setAnswered] = useState(false);
-  const [chosenAnswer, setChosenAnswer] = useState<number | null>(null);
-  const [score, setScore] = useState(0);
-  const [finished, setFinished] = useState(false);
+  const [currentIdx, setCurrentIdx] = useState<number>(0);
+  const [score, setScore] = useState<number>(0);
+  const [showResult, setShowResult] = useState<boolean>(false);
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [isAnswered, setIsAnswered] = useState<boolean>(false);
+  const shouldReduceMotion = useReducedMotion();
 
-  const currentQ = questions[idx];
+  const currentQuestion = questions[currentIdx];
 
-  const handleAnswer = useCallback((chosen: number) => {
-    if (answered) return;
-    setAnswered(true);
-    setChosenAnswer(chosen);
-    if (chosen === currentQ.ans) {
+  /**
+   * Handles answer selection.
+   */
+  const handleAnswer = useCallback((idx: number) => {
+    if (isAnswered) return;
+    setSelectedIdx(idx);
+    setIsAnswered(true);
+    if (idx === currentQuestion.correctIdx) {
       setScore(prev => prev + 1);
     }
-  }, [answered, currentQ]);
+  }, [isAnswered, currentQuestion]);
 
-  const nextQuestion = useCallback(() => {
-    if (idx + 1 >= questions.length) {
-      setFinished(true);
+  /**
+   * Proceeds to the next question or shows the final score.
+   */
+  const handleNext = useCallback(() => {
+    if (currentIdx < questions.length - 1) {
+      setCurrentIdx(prev => prev + 1);
+      setSelectedIdx(null);
+      setIsAnswered(false);
     } else {
-      setIdx(prev => prev + 1);
-      setAnswered(false);
-      setChosenAnswer(null);
+      setShowResult(true);
     }
-  }, [idx, questions.length]);
+  }, [currentIdx, questions.length]);
 
-  const restartQuiz = useCallback(() => {
-    setIdx(0);
-    setAnswered(false);
-    setChosenAnswer(null);
+  /**
+   * Resets the quiz state.
+   */
+  const handleReset = useCallback(() => {
+    setCurrentIdx(0);
     setScore(0);
-    setFinished(false);
+    setShowResult(false);
+    setSelectedIdx(null);
+    setIsAnswered(false);
   }, []);
 
-  if (finished) {
-    const pct = Math.round((score / questions.length) * 100);
-    const msgs = [
-      'Keep studying! Every civics lesson counts.',
-      'Good effort — review the timeline for more context.',
-      'Solid knowledge! You know your election process.',
-      'Excellent! You are a civic education champion.'
-    ];
-    const msg = pct < 40 ? msgs[0] : pct < 60 ? msgs[1] : pct < 80 ? msgs[2] : msgs[3];
+  /**
+   * Animation variants.
+   */
+  const cardVariants: Variants = {
+    initial: { opacity: 0, scale: shouldReduceMotion ? 1 : 0.95, y: shouldReduceMotion ? 0 : 20 },
+    animate: { opacity: 1, scale: 1, y: 0 },
+    exit: { opacity: 0, scale: shouldReduceMotion ? 1 : 0.95, y: shouldReduceMotion ? 0 : -20 }
+  };
 
+  if (showResult) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center"
+      <m.div 
+        variants={cardVariants}
+        initial="initial"
+        animate="animate"
+        className="glass-panel p-12 text-center bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/30 rounded-[3rem] shadow-2xl"
       >
-        <Trophy size={48} className="mx-auto mb-4 text-amber-500" />
-        <div className="text-5xl font-black text-slate-900 dark:text-white mb-1">
-          {score}/{questions.length}
+        <div className="w-24 h-24 bg-blue-600 text-white rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl">
+          <Trophy size={48} />
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Your score — {pct}%</p>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed max-w-sm mx-auto">{msg}</p>
-        <button
-          onClick={restartQuiz}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-colors text-sm"
+        <h2 className="text-4xl font-black mb-4 tracking-tight text-slate-900 dark:text-white">Quiz Complete!</h2>
+        <p className="text-xl font-bold text-blue-600 mb-8 uppercase tracking-widest">{countryLabel} Challenge</p>
+        <div className="text-6xl font-black mb-10 text-slate-900 dark:text-white">
+          {score} <span className="text-slate-300 dark:text-slate-700 text-3xl">/ {questions.length}</span>
+        </div>
+        <button 
+          onClick={handleReset}
+          className="inline-flex items-center gap-3 px-10 py-5 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition-all shadow-xl active:scale-95"
         >
-          <RotateCcw size={16} /> Try again
+          <RefreshCcw size={20} /> Try Again
         </button>
-      </motion.div>
+      </m.div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6">
-      <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mb-1">
-        Question {idx + 1} of {questions.length}
-      </p>
-      <h3 className="text-[15px] font-semibold text-slate-800 dark:text-slate-100 mb-5 leading-snug">
-        {currentQ.q}
-      </h3>
-
-      <div className="space-y-2">
-        {currentQ.opts.map((opt, i) => {
-          let optClass = 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600';
-          if (answered) {
-            if (i === currentQ.ans) {
-              optClass = 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300';
-            } else if (i === chosenAnswer && chosenAnswer !== currentQ.ans) {
-              optClass = 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300';
-            }
-          }
-          return (
-            <button
-              key={i}
-              onClick={() => handleAnswer(i)}
-              disabled={answered}
-              className={`w-full text-left px-4 py-3 border rounded-xl text-sm transition-all disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${optClass}`}
-            >
-              <div className="flex items-center gap-2">
-                {answered && i === currentQ.ans && <CheckCircle size={16} className="text-emerald-600 flex-shrink-0" />}
-                {answered && i === chosenAnswer && chosenAnswer !== currentQ.ans && <XCircle size={16} className="text-red-600 flex-shrink-0" />}
-                <span>{opt}</span>
-              </div>
-            </button>
-          );
-        })}
+    <div className="space-y-8">
+      {/* Progress */}
+      <div className="flex items-center justify-between px-2">
+        <div className="flex items-center gap-2 text-blue-600">
+          <Brain size={20} />
+          <span className="font-black uppercase tracking-widest text-sm">{countryLabel} Quiz</span>
+        </div>
+        <span className="font-black text-slate-400">0{currentIdx + 1} / 0{questions.length}</span>
       </div>
 
-      <AnimatePresence>
-        {answered && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className={`mt-4 p-3 rounded-xl text-[13px] leading-relaxed ${
-              chosenAnswer === currentQ.ans
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
-                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
-            }`}
-          >
-            <strong>{chosenAnswer === currentQ.ans ? 'Correct!' : 'Not quite.'}</strong> {currentQ.exp}
-          </motion.div>
-        )}
+      <AnimatePresence mode="wait">
+        <m.div 
+          key={currentIdx}
+          variants={cardVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+          className="glass-panel p-8 md:p-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[3rem] shadow-2xl"
+        >
+          <h3 className="text-2xl md:text-3xl font-black mb-10 tracking-tight text-slate-900 dark:text-white leading-tight">
+            {currentQuestion.question}
+          </h3>
+
+          <div className="space-y-4">
+            {currentQuestion.options.map((option, idx) => {
+              const isCorrect = idx === currentQuestion.correctIdx;
+              const isSelected = idx === selectedIdx;
+              
+              let statusClass = 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-blue-600/30';
+              if (isAnswered) {
+                if (isCorrect) statusClass = 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500 text-emerald-700 dark:text-emerald-400';
+                else if (isSelected) statusClass = 'bg-red-50 dark:bg-red-900/20 border-red-500 text-red-700 dark:text-red-400';
+              }
+
+              return (
+                <button 
+                  key={idx}
+                  onClick={() => handleAnswer(idx)}
+                  disabled={isAnswered}
+                  className={`w-full text-left p-6 rounded-2xl border-2 font-bold transition-all flex items-center justify-between group ${statusClass}`}
+                >
+                  <span>{option}</span>
+                  {isAnswered && isCorrect && <Check size={20} />}
+                  {isAnswered && !isCorrect && isSelected && <X size={20} />}
+                </button>
+              );
+            })}
+          </div>
+
+          <AnimatePresence>
+            {isAnswered && (
+              <m.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mt-10 p-6 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800/30"
+              >
+                <p className="text-sm font-bold text-blue-800 dark:text-blue-300 mb-2 uppercase tracking-widest">Educational Insight</p>
+                <p className="text-slate-600 dark:text-slate-400 font-medium leading-relaxed italic">
+                  &quot;{currentQuestion.explanation}&quot;
+                </p>
+                <button 
+                  onClick={handleNext}
+                  className="mt-6 w-full flex items-center justify-center gap-2 py-4 bg-slate-900 dark:bg-blue-600 text-white rounded-xl font-black text-sm hover:opacity-90 transition-opacity"
+                >
+                  {currentIdx < questions.length - 1 ? 'Next Question' : 'See Results'} <ArrowRight size={18} />
+                </button>
+              </m.div>
+            )}
+          </AnimatePresence>
+        </m.div>
       </AnimatePresence>
-
-      <div className="flex items-center justify-between mt-5">
-        <span className="text-xs text-slate-400 dark:text-slate-500">Score: {score} correct</span>
-        {answered && (
-          <motion.button
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            onClick={nextQuestion}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-colors text-sm"
-          >
-            {idx + 1 >= questions.length ? 'See Results' : 'Next question'} <ArrowRight size={14} />
-          </motion.button>
-        )}
-      </div>
     </div>
   );
 };

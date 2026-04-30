@@ -1,163 +1,123 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Bot, Sparkles } from 'lucide-react';
+import { m, useReducedMotion } from 'framer-motion';
+import { Send, Bot, User, Loader2, Info } from 'lucide-react';
 import { sanitizeHTML } from '@/utils/sanitize';
+import { ChatMessage, Variants } from '@/types';
+import { useGeminiChat } from '@/hooks/useGeminiChat';
 
 /**
- * Predefined quick questions for the AI assistant to guide users.
- */
-const QUICK_QUESTIONS: string[] = [
-  'How does the Electoral College work?',
-  'What is voter suppression?',
-  'How are results certified?',
-  'What is ranked choice voting?',
-  'How do I register to vote in India?',
-  'What if there is a tie?',
-];
-
-/**
- * Interface for AI Chat responses.
- * 
- * @interface ChatResponse
- */
-interface ChatResponse {
-  /** The natural language response from the AI. */
-  response: string;
-  /** Error message if the request failed. */
-  error?: string;
-}
-
-/**
- * AI-powered "Ballot Buddy" component.
- * Allows users to ask natural language questions about the election process.
- * Optimized with useCallback for efficient event handling and strict TypeScript typing.
+ * Educational AI assistant interface — "Ballot Buddy".
+ * Refactored to use useGeminiChat hook and LazyMotion for efficiency.
+ * Accessibility: Respects user preference for reduced motion.
  * 
  * @component
- * @returns {JSX.Element} The rendered AskAnything UI.
+ * @returns {JSX.Element} The rendered in-page AI assistant hub.
  */
 const AskAnything: React.FC = () => {
   const [input, setInput] = useState<string>('');
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const shouldReduceMotion = useReducedMotion();
+
+  const { messages, isLoading, sendMessage } = useGeminiChat([
+    { text: "Ask me any election-related question and I'll neutrally explain it for you.", sender: 'bot' }
+  ]);
 
   /**
-   * Sends a question to the AI backend and processes the response.
-   * 
-   * @param {string} question - The user's question.
+   * Animation variants.
    */
-  const handleAsk = useCallback(async (question: string): Promise<void> => {
-    if (!question.trim() || isLoading) return;
-    
-    setIsLoading(true);
-    setAnswer(null);
-    setInput('');
+  const messageVariants: Variants = {
+    hidden: { opacity: 0, x: shouldReduceMotion ? 0 : -20 },
+    visible: { opacity: 1, x: 0 }
+  };
 
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: question }),
-      });
-      
-      const data: ChatResponse = await response.json();
-      setAnswer(data.response || 'No response received.');
-    } catch (error) {
-      console.error('Chat Error:', error);
-      setAnswer('Unable to connect to Ballot Buddy. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isLoading]);
+  /**
+   * Handles form submission.
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    const text = input.trim();
+    setInput('');
+    await sendMessage(text);
+  };
 
   return (
-    <section aria-label="Ask any question about elections">
-      <p className="text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
-        Ask any question about elections
-      </p>
+    <div className="space-y-8">
+      {/* Informational Header */}
+      <div className="p-6 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30 rounded-3xl flex gap-4">
+        <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-amber-600 flex-shrink-0">
+          <Info size={20} />
+        </div>
+        <div>
+          <h4 className="font-black text-sm uppercase tracking-widest text-amber-800 dark:text-amber-300 mb-1">Neutrality Guarantee</h4>
+          <p className="text-sm font-medium text-amber-700/80 dark:text-amber-400/70 leading-relaxed italic">
+            &quot;I am programmed to be non-partisan. I provide factual, non-biased information to help you form your own conclusions.&quot;
+          </p>
+        </div>
+      </div>
 
-      {/* --- Input Interface --- */}
-      <div className="flex gap-2 mb-3">
-        <input
-          type="text"
+      {/* Chat Display Area */}
+      <div className="space-y-6 min-h-[300px]">
+        {messages.map((msg: ChatMessage, idx: number) => (
+          <m.div 
+            key={idx}
+            variants={messageVariants}
+            initial="hidden"
+            animate="visible"
+            className={`flex items-start gap-4 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
+          >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              msg.sender === 'bot' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700'
+            }`}>
+              {msg.sender === 'bot' ? <Bot size={20} /> : <User size={20} />}
+            </div>
+            <div className={`max-w-[80%] p-6 rounded-3xl shadow-xl ${
+              msg.sender === 'bot' 
+                ? 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800' 
+                : 'bg-blue-600 text-white'
+            }`}>
+              {msg.sender === 'bot' ? (
+                <div 
+                  className="prose prose-sm dark:prose-invert max-w-none leading-relaxed font-medium"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(msg.text) }} 
+                />
+              ) : (
+                <p className="font-semibold leading-relaxed">{msg.text}</p>
+              )}
+            </div>
+          </m.div>
+        ))}
+
+        {isLoading && (
+          <div className="flex items-center gap-4 text-blue-600">
+            <Loader2 className="animate-spin" size={24} />
+            <span className="font-black uppercase tracking-widest text-[10px]">Ballot Buddy is thinking...</span>
+          </div>
+        )}
+      </div>
+
+      {/* Input Area */}
+      <form onSubmit={handleSubmit} className="relative group">
+        <input 
+          type="text" 
           value={input}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
-          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleAsk(input)}
-          placeholder="e.g. What is gerrymandering?"
-          className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all shadow-sm"
-          aria-label="Type your election question"
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your question (e.g., What is a caucus?)..."
+          className="w-full pl-6 pr-20 py-6 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl focus:ring-4 focus:ring-blue-600/20 focus:border-blue-600 outline-none transition-all font-medium text-lg"
+          aria-label="Ask a question"
           disabled={isLoading}
         />
-        <button
-          onClick={() => handleAsk(input)}
+        <button 
+          type="submit"
           disabled={!input.trim() || isLoading}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 dark:disabled:bg-slate-700 text-white font-bold rounded-xl transition-all text-sm flex items-center gap-1.5 shadow-lg shadow-blue-500/20 active:scale-95"
+          className="absolute right-3 top-3 bottom-3 w-14 bg-blue-600 text-white rounded-3xl flex items-center justify-center hover:bg-blue-700 transition-all disabled:bg-slate-400 shadow-xl active:scale-95"
+          aria-label="Send"
         >
-          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <><Send size={14} /> Ask</>}
+          <Send size={24} />
         </button>
-      </div>
-
-      {/* --- Quick Question Suggester --- */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        {QUICK_QUESTIONS.map((q: string, i: number) => (
-          <button
-            key={i}
-            onClick={() => { setInput(q); handleAsk(q); }}
-            disabled={isLoading}
-            className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-full text-xs text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-all disabled:opacity-50"
-          >
-            {q} ↗
-          </button>
-        ))}
-      </div>
-
-      {/* --- Response Display --- */}
-      <AnimatePresence mode="wait">
-        {isLoading && (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
-          >
-            <Loader2 size={20} className="animate-spin text-blue-500" />
-            <span className="text-sm text-slate-500 dark:text-slate-400">Thinking…</span>
-          </motion.div>
-        )}
-
-        {!isLoading && answer && (
-          <motion.div
-            key="answer"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="p-4 bg-white dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
-          >
-            <div className="flex items-center gap-2 mb-3 text-[11px] uppercase font-bold text-blue-500 tracking-widest">
-              <Bot size={14} /> Ballot Buddy
-            </div>
-            <div
-              className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: sanitizeHTML(answer) }}
-            />
-          </motion.div>
-        )}
-
-        {!isLoading && !answer && (
-          <motion.div
-            key="placeholder"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="p-4 bg-white dark:bg-slate-800/40 rounded-xl text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed flex items-start gap-2 border border-dashed border-slate-200 dark:border-slate-700"
-          >
-            <Sparkles size={16} className="flex-shrink-0 mt-0.5 text-amber-500" />
-            This assistant can help explain any part of the election process — from voter registration deadlines to how votes are counted and certified. Click a question above or type your own.
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
+      </form>
+    </div>
   );
 };
 
